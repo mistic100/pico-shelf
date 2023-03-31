@@ -2,17 +2,17 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Shelf</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-		
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Shelf</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
 	<style>
 		:root {
 			--checkbox-width: 200px;
 			--checkbox-height: 70px;
 		}
-		
+
 		.checkbox-switch {
 			cursor: pointer;
 			display: inline-block;
@@ -63,11 +63,11 @@
 			pointer-events: none;
 		}
 
-		.checkbox-switch input.input-checkbox:checked + .checkbox-animate {
+		.checkbox-switch input.input-checkbox:checked+.checkbox-animate {
 			background-color: #2ecc71;
 		}
 
-		.checkbox-switch input.input-checkbox:checked + .checkbox-animate:before {
+		.checkbox-switch input.input-checkbox:checked+.checkbox-animate:before {
 			left: calc(var(--checkbox-width) - var(--checkbox-height) / 3 * 2 - var(--checkbox-height) / 6);
 			background-color: #27ae60;
 		}
@@ -83,74 +83,115 @@
 			display: none;
 		}
 
-		.checkbox-switch input.input-checkbox:checked + .checkbox-animate .checkbox-off {
+		.checkbox-switch input.input-checkbox:checked+.checkbox-animate .checkbox-off {
 			display: none;
 		}
 
-		.checkbox-switch input.input-checkbox:checked + .checkbox-animate .checkbox-on {
+		.checkbox-switch input.input-checkbox:checked+.checkbox-animate .checkbox-on {
 			display: block;
+		}
+
+		.form-title {
+			width: 100px;
 		}
 	</style>
 </head>
 
 <body>
-    <header class="p-3 text-bg-dark mb-5">
+	<header class="p-3 text-bg-dark mb-5">
 		<div class="d-flex align-items-center justify-content-center">
 			<h3>Shelf</h3>
 		</div>
-    </header>
-	
-	<div class="container d-flex justify-content-center mb-5">
-		<div class="checkbox-switch">
-		   <input type="checkbox" name="status" class="input-checkbox" id="state">
-		   <div class="checkbox-animate">
-			  <span class="checkbox-off">OFF</span>
-			  <span class="checkbox-on">ON</span>
-		   </div>
+	</header>
+
+	<div class="container mb-5">
+		<div class="row">
+			<div class="col">
+				<div class="card text-center">
+					<div class="card-body">
+						<h5 class="card-title">Général</h5>
+						<div class="checkbox-switch">
+							<input type="checkbox" name="status" class="input-checkbox" id="state">
+							<div class="checkbox-animate">
+								<span class="checkbox-off">OFF</span>
+								<span class="checkbox-on">ON</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col">
+				<div class="card text-center">
+					<div class="card-body">
+						<h5 class="card-title">Lampes</h5>
+						<div class="checkbox-switch">
+							<input type="checkbox" name="status" class="input-checkbox" id="lights">
+							<div class="checkbox-animate">
+								<span class="checkbox-off">OFF</span>
+								<span class="checkbox-on">ON</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
-	
-	<div class="container card mb-5">
-	    <div class="card-body">
-			<h5 class="card-title">Config</h5>
-			
-			<form>
-				<div class="input-group mb-3">
-					<span class="input-group-text">Weekdays</span>
-					<div class="form-floating">
-						<input type="number" class="form-control" id="weekFrom" placeholder="From">
-						<label for="weekFrom">From</label>
-					</div>
-					<div class="form-floating">
-						<input type="number" class="form-control" id="weekTo" placeholder="To">
-						<label for="weekTo">To</label>
-					</div>
-				</div>
-				
-				<div class="input-group mb-3">
-					<span class="input-group-text">Weekends</span>
-					<div class="form-floating">
-						<input type="number" class="form-control" id="weekendFrom" placeholder="From">
-						<label for="weekendFrom">From</label>
-					</div>
-					<div class="form-floating">
-						<input type="number" class="form-control" id="weekendTo" placeholder="To">
-						<label for="weekendTo">To</label>
-					</div>
-				</div>
 
-				<button type="submit" class="btn btn-primary">Save</button>
-			</form>
-	    </div>
+	<div class="container mb-5">
+		<div class="card">
+			<div class="card-body">
+				<h5 class="card-title">Config</h5>
+
+				<form>
+					<div class="input-group mb-3">
+						<span class="input-group-text form-title">Weekdays</span>
+						<div class="form-floating">
+							<input type="number" class="form-control" id="weekFrom" placeholder="From">
+							<label for="weekFrom">From</label>
+						</div>
+						<div class="form-floating">
+							<input type="number" class="form-control" id="weekTo" placeholder="To">
+							<label for="weekTo">To</label>
+						</div>
+					</div>
+
+					<div class="input-group mb-3">
+						<span class="input-group-text form-title">Weekends</span>
+						<div class="form-floating">
+							<input type="number" class="form-control" id="weekendFrom" placeholder="From">
+							<label for="weekendFrom">From</label>
+						</div>
+						<div class="form-floating">
+							<input type="number" class="form-control" id="weekendTo" placeholder="To">
+							<label for="weekendTo">To</label>
+						</div>
+					</div>
+
+					<div class="input-group mb-3">
+						<span class="input-group-text form-title">Lights</span>
+						<div class="form-floating">
+							<input type="number" class="form-control" id="lightsFrom" placeholder="From">
+							<label for="lightsFrom">From</label>
+						</div>
+						<div class="form-floating">
+							<input type="number" class="form-control" id="lightsTo" placeholder="To">
+							<label for="lightsTo">To</label>
+						</div>
+					</div>
+
+					<button type="submit" class="btn btn-primary">Save</button>
+				</form>
+			</div>
+		</div>
 	</div>
-	
+
 	<div id="time">&nbsp;</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 
 	<script>
 		let store = {};
-		
+
 		function refreshState(init) {
 			fetch('/api')
 				.then(r => r.json())
@@ -162,15 +203,18 @@
 
 		function updateUi(init) {
 			document.querySelector('#state').checked = store.state;
-			
+			document.querySelector('#lights').checked = store.lights;
+
 			const t = store.time;
 			document.querySelector('#time').innerText = `Time: ${t[0]}-${t[1]}-${t[2]} ${t[3]}:${t[4]}:${t[5]}`;
-			
+
 			if (init) {
 				document.querySelector('#weekFrom').value = store.config.week.from;
 				document.querySelector('#weekTo').value = store.config.week.to;
 				document.querySelector('#weekendFrom').value = store.config.weekend.from;
 				document.querySelector('#weekendTo').value = store.config.weekend.to;
+				document.querySelector('#lightsFrom').value = store.config.lights.from;
+				document.querySelector('#lightsTo').value = store.config.lights.to;
 			}
 		}
 
@@ -181,15 +225,26 @@
 			});
 		}
 
+		function updateLights(lights) {
+			fetch(`/api/lights`, {
+				method: 'POST',
+				body: lights,
+			});
+		}
+
 		function updateConfig(config) {
 			fetch(`/api/config`, {
 				method: 'POST',
 				body: JSON.stringify(config),
 			});
 		}
-		
+
 		document.querySelector('#state').addEventListener('change', (e) => {
 			updateState(e.target.checked);
+		});
+
+		document.querySelector('#lights').addEventListener('change', (e) => {
+			updateLights(e.target.checked);
 		});
 
 		document.querySelector('form').addEventListener('submit', (e) => {
@@ -201,6 +256,10 @@
 				weekend: {
 					from: parseInt(document.querySelector('#weekendFrom').value),
 					to: parseInt(document.querySelector('#weekendTo').value),
+				},
+				lights: {
+					from: parseInt(document.querySelector('#lightsFrom').value),
+					to: parseInt(document.querySelector('#lightsTo').value),
 				},
 			});
 			e.preventDefault();

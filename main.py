@@ -7,8 +7,8 @@ import micropython
 import json
 import os
 from time import sleep
+from machine import Timer, Pin
 from picozero import pico_led
-from machine import Pin
 
 micropython.alloc_emergency_exception_buf(100)
 
@@ -28,11 +28,19 @@ k3 = Pin(12, mode=Pin.OUT, value=K_VALUE_OFF)
 k4 = Pin(13, mode=Pin.OUT, value=K_VALUE_OFF)
 
 btn1 = Pin(21, mode=Pin.IN, pull=Pin.PULL_UP)
+btn2 = Pin(20, mode=Pin.IN, pull=Pin.PULL_UP)
+
+timer = Timer()
 
 
 state = False
 schedule_state = False
 override_state = False
+
+lights = False
+schedule_lights = False
+override_lights = False
+
 config = {}
 wifi = {}
 
@@ -46,7 +54,7 @@ def load_config():
         wifi = json.load(f)
         f.close()
     except OSError:
-        print('MISSING wifi.json FILE')
+        print('MISSING wifi.json FILE!')
         quit()
     
     try:
@@ -55,14 +63,8 @@ def load_config():
         f.close()
         print("Loaded config: %s" %str(config))
     except OSError:
-        config = {}
-        config['week'] = {}
-        config['week']['from'] = 17
-        config['week']['to'] = 24
-        config['weekend'] = {}
-        config['weekend']['from'] = 10
-        config['weekend']['to'] = 24
-        print("Default config: %s" %str(config))
+        print('MISSING config.json FILE!')
+        quit()
 
 def save_config():
     global config
@@ -73,66 +75,65 @@ def save_config():
     print("Saved config: %s" %str(config))
 
 
-def all_on():
-    global state
-    k1.value(K_VALUE_ON)
-    k2.value(K_VALUE_ON)
-    k3.value(K_VALUE_ON)
-    k4.value(K_VALUE_ON)
-    state = True
-
-def all_off():
-    global state
-    k1.value(K_VALUE_OFF)
-    k2.value(K_VALUE_OFF)
-    k3.value(K_VALUE_OFF)
-    k4.value(K_VALUE_OFF)
-    state = False
-        
-def compute_override():
+def apply():
     global state
     global override_state
     global schedule_state
+    global lights
+    global override_lights
+    global schedule_lights
+
+    if state:
+        k1.value(K_VALUE_ON if lights else K_VALUE_OFF)
+        k2.value(K_VALUE_ON)
+        k3.value(K_VALUE_ON)
+        k4.value(K_VALUE_ON)
+
+    else:
+        k1.value(K_VALUE_OFF)
+        k2.value(K_VALUE_OFF)
+        k3.value(K_VALUE_OFF)
+        k4.value(K_VALUE_OFF)
 
     override_state = state != schedule_state
-    
-def force_on():
-    all_on()
-    compute_override()
-    
-def force_off():
-    all_off()
-    compute_override()
+    override_lights = lights != schedule_lights
 
-def btn_press(pin):
+
+def btn1_press(pin):
     global state
-    
-    if state:
-        force_off()
-    else:
-        force_on()
+
+    state = not state
+    apply()
+
+def btn2_press(pin):
+    global lights
+
+    lights = not lights
+    apply()
         
 def timer_tick(t):
     global config
+    global state
+    global lights
     global override_state
     global schedule_state
+    global override_lights
+    global schedule_lights
     
     time = cet_time()
 
-    if time[6] <= 4:
-        c = config['week']
-    else:
-        c = config['weekend']
-        
+    c = config['week'] if time[6] <= 4 else config['weekend']
     schedule_state = time[3] >= c['from'] and time[3] < c['to']
+
+    c = config['lights']
+    schedule_lights = time[3] >= c['from'] and time[3] < c['to']
     
     if not override_state:
-        if schedule_state:
-            all_on()
-        else:
-            all_off()
+        state = schedule_state
+    if not override_lights:
+        lights = schedule_lights
     
-    compute_override()
+    apply()
     
 
 def connect_wifi():
@@ -172,14 +173,15 @@ def serve(con):
             
             if path.startswith('/api'):
                 serve_api(client, method, path.replace("/api", ""), body)
-                continue;
+                continue
             
             if path == '/':
                 path = '/index.html'
 
             f = open(WWW_DIR + path, 'r')
-            client.send(HEADER_OK + f.read())
+            content = f.read()
             f.close()
+            client.sendall(HEADER_OK + content)
 
         except Exception as e:
             print(e)
@@ -189,19 +191,25 @@ def serve(con):
         
 def serve_api(client, method, path, body):
     global config
+    global state
+    global lights
     
     if (path == '' or path =='/') and method == 'GET':
         client.send(HEADER_OK + json.dumps({
-            'state': state,
             'time': cet_time(),
+            'state': state,
+            'lights': lights,
             'config': config
         }))
         
     elif path == '/state' and method == 'POST':
-        if body == 'true':
-            force_on()
-        else:
-            force_off()
+        state = body == 'true'
+        apply()
+        client.send(HEADER_OK)
+        
+    elif path == '/lights' and method == 'POST':
+        lights = body == 'true'
+        apply()
         client.send(HEADER_OK)
         
     elif path == '/config' and method == 'POST':
@@ -243,10 +251,9 @@ try:
     
     pico_led.on()
     
-    btn1.irq(trigger=Pin.IRQ_FALLING, handler=btn_press)
-    
-    timer = machine.Timer()
-    timer.init(period=1000, mode=machine.Timer.PERIODIC, callback=timer_tick)
+    btn1.irq(trigger=Pin.IRQ_FALLING, handler=btn1_press)
+    btn2.irq(trigger=Pin.IRQ_FALLING, handler=btn2_press)
+    timer.init(period=1000, mode=Timer.PERIODIC, callback=timer_tick)
     
     con = open_socket(ip)
     serve(con)
