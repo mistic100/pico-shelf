@@ -6,6 +6,7 @@ import machine
 import micropython
 import json
 import os
+import sys
 from time import sleep
 from machine import Timer, Pin
 from picozero import pico_led
@@ -22,13 +23,13 @@ K_VALUE_OFF=1
 K_VALUE_ON=0
 
 
-k1 = Pin(10, mode=Pin.OUT, value=K_VALUE_OFF)
-k2 = Pin(11, mode=Pin.OUT, value=K_VALUE_OFF)
-k3 = Pin(12, mode=Pin.OUT, value=K_VALUE_OFF)
-k4 = Pin(13, mode=Pin.OUT, value=K_VALUE_OFF)
+k1 = Pin(13, mode=Pin.OUT, value=K_VALUE_OFF)
+k2 = Pin(12, mode=Pin.OUT, value=K_VALUE_OFF)
+k3 = Pin(11, mode=Pin.OUT, value=K_VALUE_OFF)
+k4 = Pin(10, mode=Pin.OUT, value=K_VALUE_OFF)
 
-btn1 = Pin(21, mode=Pin.IN, pull=Pin.PULL_UP)
-btn2 = Pin(20, mode=Pin.IN, pull=Pin.PULL_UP)
+btn1 = Pin(20, mode=Pin.IN, pull=Pin.PULL_UP)
+btn2 = Pin(21, mode=Pin.IN, pull=Pin.PULL_UP)
 
 timer = Timer()
 
@@ -41,9 +42,21 @@ lights = False
 schedule_lights = False
 override_lights = False
 
+next_ntp = 0
+last_btn = 0
+logs = []
+
 config = {}
 wifi = {}
 
+def log(message):
+    global logs
+    
+    print(message)
+    
+    logs.append(message)
+    if len(logs) > 50:
+        logs.pop(0)
 
 def load_config():
     global config
@@ -55,16 +68,16 @@ def load_config():
         f.close()
     except OSError:
         print('MISSING wifi.json FILE!')
-        quit()
+        sys.exit()
     
     try:
         f = open(CONFIG_FILE, 'r')
         config = json.load(f)
         f.close()
-        print("Loaded config: %s" %str(config))
+        log(f"Loaded config: {config}")
     except OSError:
         print('MISSING config.json FILE!')
-        quit()
+        sys.exit()
 
 def save_config():
     global config
@@ -72,7 +85,7 @@ def save_config():
     f = open(CONFIG_FILE, 'w')
     json.dump(config, f)
     f.close()
-    print("Saved config: %s" %str(config))
+    log(f"Saved config: {config}")
 
 
 def apply():
@@ -98,20 +111,7 @@ def apply():
     override_state = state != schedule_state
     override_lights = lights != schedule_lights
 
-
-def btn1_press(pin):
-    global state
-
-    state = not state
-    apply()
-
-def btn2_press(pin):
-    global lights
-
-    lights = not lights
-    apply()
-        
-def timer_tick(t):
+def schedule_and_apply():
     global config
     global state
     global lights
@@ -134,6 +134,34 @@ def timer_tick(t):
         lights = schedule_lights
     
     apply()
+
+def btn1_press(pin):
+    global state
+    global last_btn
+
+    now = time.time()
+    if now - last_btn > 1:
+        state = not state
+        apply()
+    last_btn = now
+
+def btn2_press(pin):
+    global lights
+    global last_btn
+
+    now = time.time()
+    if now - last_btn > 1:
+        lights = not lights
+        apply()
+    last_btn = now
+        
+def timer_tick(t):
+    global next_ntp
+    
+    schedule_and_apply()
+    
+    if time.time() > next_ntp:
+        sync_time()
     
 
 def connect_wifi():
@@ -148,7 +176,7 @@ def connect_wifi():
         sleep(1)
 
     ip = wlan.ifconfig()[0]
-    print(f'IP: {ip}')
+    log(f'IP: {ip}')
     return ip
 
 def open_socket(ip):
@@ -170,6 +198,9 @@ def serve(con):
             headers = headers.split(' ')
             method = headers[0]
             path = headers[1]
+            
+            if path == '/exit':
+                sys.exit()
             
             if path.startswith('/api'):
                 serve_api(client, method, path.replace("/api", ""), body)
@@ -193,6 +224,7 @@ def serve_api(client, method, path, body):
     global config
     global state
     global lights
+    global logs
     
     if (path == '' or path =='/') and method == 'GET':
         client.send(HEADER_OK + json.dumps({
@@ -201,6 +233,12 @@ def serve_api(client, method, path, body):
             'lights': lights,
             'config': config
         }))
+        
+    elif path == '/logs' and method == 'GET':
+        client.send(HEADER_OK)
+        for message in logs:
+            client.send(message)
+            client.send('\r\n')
         
     elif path == '/state' and method == 'POST':
         state = body == 'true'
@@ -218,7 +256,7 @@ def serve_api(client, method, path, body):
         client.send(HEADER_OK)
     
     else:
-        print(f'Invalid request {method} {path}')
+        log(f'Invalid request {method} {path}')
         client.send(HEADER_NOT_FOUND)
 
     client.close()
@@ -238,10 +276,16 @@ def cet_time():
     return(cet)
 
 def sync_time():
+    global next_ntp
+    
     ntptime.host = "fr.pool.ntp.org"
     ntptime.settime()
-    print("UTC time: %s" %str(time.localtime()))
-    print("CET time: %s" %str(cet_time()))
+    
+    next_ntp = time.time() + 24 * 3600
+    
+    log(f"UTC time: {time.localtime()}")
+    log(f"CET time: {cet_time()}")
+    log(f"Next NTP: {time.gmtime(next_ntp)}")
 
 try:
     load_config()
@@ -262,3 +306,4 @@ try:
 except KeyboardInterrupt:
     pico_led.off()
     machine.reset()
+
